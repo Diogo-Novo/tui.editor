@@ -19,6 +19,7 @@ export class Image extends NodeSchema {
         imageUrl: { default: '' },
         altText: { default: null },
         rawHTML: { default: null },
+        style: { default: null },
         ...getDefaultCustomAttrs(),
       },
       group: 'inline',
@@ -32,10 +33,12 @@ export class Image extends NodeSchema {
             const imageUrl = sanitizedDOM.getAttribute('src') || '';
             const rawHTML = sanitizedDOM.getAttribute('data-raw-html');
             const altText = sanitizedDOM.getAttribute('alt');
+            const style = sanitizedDOM.getAttribute('style');
 
             return {
               imageUrl,
               altText,
+              style,
               ...(rawHTML && { rawHTML }),
             };
           },
@@ -46,6 +49,7 @@ export class Image extends NodeSchema {
           attrs.rawHTML || 'img',
           {
             src: escapeXml(attrs.imageUrl),
+            ...(attrs.style && { style: attrs.style }),
             ...(attrs.altText && { alt: attrs.altText }),
             ...getCustomAttrs(attrs),
           },

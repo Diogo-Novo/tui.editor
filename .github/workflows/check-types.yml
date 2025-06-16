@@ -1,6 +1,6 @@
 name: Editor Check Types
 on: pull_request
-jobs: 
+jobs:
   check-types:
     name: Check Types
     runs-on: ubuntu-latest

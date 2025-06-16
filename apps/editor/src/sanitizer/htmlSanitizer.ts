@@ -16,7 +16,20 @@ export function sanitizeHTML<T extends string | HTMLElement | DocumentFragment =
 ) {
   return DOMPurify.sanitize(html, {
     ADD_TAGS: whiteTagList,
-    ADD_ATTR: ['rel', 'target', 'hreflang', 'type'],
+    ADD_ATTR: [
+      'rel',
+      'target',
+      'hreflang',
+      'type',
+      'style',
+      'class',
+      'id',
+      'data-raw-html',
+      'align',
+    ],
+    KEEP_CONTENT: true,
+    RETURN_DOM_FRAGMENT: false,
+    RETURN_DOM: false,
     FORBID_TAGS: [
       'input',
       'script',
@@ -25,11 +38,12 @@ export function sanitizeHTML<T extends string | HTMLElement | DocumentFragment =
       'button',
       'select',
       'meta',
-      'style',
       'link',
-      'title',
       'object',
       'base',
+      'onclick',
+      'onload',
+      'onerror',
     ],
     ...options,
   }) as T;

@@ -30,7 +30,6 @@
   clear: both;
 }
 
-
 .toastui-editor-main {
   min-height: 0px;
   position: relative;
@@ -366,8 +365,8 @@
   right: 0;
   bottom: 0;
   background-color: #d6d8de;
-  -webkit-transition: .4s;
-  transition: .4s;
+  -webkit-transition: 0.4s;
+  transition: 0.4s;
   border-radius: 50px;
 }
 
@@ -383,8 +382,8 @@
   left: 0px;
   bottom: -2px;
   background-color: #94979f;
-  -webkit-transition: .4s;
-  transition: .4s;
+  -webkit-transition: 0.4s;
+  transition: 0.4s;
   border-radius: 50%;
 }
 
@@ -589,7 +588,7 @@
 .toastui-editor-popup-add-table .toastui-editor-table-description {
   margin: 5px 0 0;
   text-align: center;
-  color: #333
+  color: #333;
 }
 
 .toastui-editor-popup-add-heading {

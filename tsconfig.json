@@ -11,6 +11,6 @@
     "allowSyntheticDefaultImports": true,
     "sourceMap": true,
     "baseUrl": ".",
-    "noEmit": true,
+    "noEmit": true
   }
 }

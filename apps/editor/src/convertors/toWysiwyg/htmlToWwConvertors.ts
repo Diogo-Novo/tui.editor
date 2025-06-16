@@ -60,10 +60,15 @@ function getMatchedAttributeValue(rawHTML: string, ...attrNames: string[]) {
   const wrapper = document.createElement('div');
 
   wrapper.innerHTML = sanitizeHTML(rawHTML);
-
   const el = wrapper.firstChild as HTMLElement;
 
-  return attrNames.map((attrName) => el.getAttribute(attrName) || '');
+  return attrNames.map((attrName) => {
+    if (attrName === 'style' && el.hasAttribute('style')) {
+      // Return the raw style attribute
+      return el.getAttribute('style');
+    }
+    return el.getAttribute(attrName) || '';
+  });
 }
 
 function createConvertors(convertors: HTMLToWwConvertorMap) {
@@ -75,7 +80,36 @@ function createConvertors(convertors: HTMLToWwConvertorMap) {
     tagNames.forEach((tagName) => {
       const name = tagName.toLowerCase();
 
-      convertorMap[name] = convertors[key]!;
+      // For elements we want to preserve exactly
+      if (['div', 'p', 'span'].includes(name)) {
+        convertorMap[name] = (state, node, openTagName) => {
+          const container = document.createElement('div');
+
+          container.innerHTML = node.literal!;
+          const el = container.firstChild as HTMLElement;
+
+          const attrs: Record<string, string | null> = {};
+
+          Array.from(el.attributes).forEach((attr) => {
+            attrs[attr.name] = attr.value;
+          });
+
+          if (name === 'div') {
+            state.openNode(state.schema.nodes.div, {
+              ...attrs,
+              rawHTML: openTagName,
+            });
+          } else if (name === 'p') {
+            state.openNode(state.schema.nodes.paragraph, {
+              ...attrs,
+              rawHTML: openTagName,
+            });
+          }
+          // Handle other elements similarly
+        };
+      } else {
+        convertorMap[name] = convertors[key]!;
+      }
     });
   });
 
@@ -83,13 +117,84 @@ function createConvertors(convertors: HTMLToWwConvertorMap) {
 }
 
 const convertors: HTMLToWwConvertorMap = {
-  'b, strong': (state, _, openTagName) => {
-    const { strong } = state.schema.marks;
+  div: (state, node, openTagName) => {
+    const { div } = state.schema.nodes;
 
     if (openTagName) {
-      state.openMark(strong.create({ rawHTML: openTagName }));
+      const container = document.createElement('div');
+
+      container.innerHTML = node.literal!;
+      const divEl = container.firstChild as HTMLElement;
+
+      // Clean and combine styles
+      const style = divEl.getAttribute('style');
+      const cleanedStyle = style
+        ? style
+            .split(';')
+            .filter((val, i, arr) => val.trim() && arr.indexOf(val) === i)
+            .join(';')
+        : null;
+
+      const attrs = {
+        style: cleanedStyle,
+        class: divEl.getAttribute('class'),
+        rawHTML: openTagName,
+      };
+
+      state.openNode(div, attrs);
+    } else {
+      state.closeNode();
+    }
+  },
+
+  'b, strong': (state, node, openTagName) => {
+    const { strong } = state.schema.marks;
+    const container = document.createElement('div');
+
+    container.innerHTML = node.literal!;
+    const el = container.firstChild as HTMLElement;
+
+    if (openTagName) {
+      state.openMark(
+        strong.create({
+          rawHTML: openTagName,
+          style: el.getAttribute('style'), // Preserve style
+        })
+      );
     } else {
       state.closeMark(strong);
+    }
+  },
+
+  // Similarly modify other handlers as needed...
+
+  // Add p handler to preserve attributes
+  p: (state, node, openTagName) => {
+    const { paragraph } = state.schema.nodes;
+
+    if (openTagName) {
+      const container = document.createElement('div');
+
+      container.innerHTML = node.literal!;
+      const pEl = container.firstChild as HTMLElement;
+
+      // Clean and combine styles like we did for div
+      const style = pEl.getAttribute('style');
+      const cleanedStyle = style
+        ? style
+            .split(';')
+            .filter((val, i, arr) => val.trim() && arr.indexOf(val) === i)
+            .join(';')
+        : null;
+
+      state.openNode(paragraph, {
+        style: cleanedStyle,
+        class: pEl.getAttribute('class'),
+        rawHTML: openTagName,
+        preserveWhitespace: true, // Add this flag
+      });
+    } else {
+      state.closeNode();
     }
   },
 
@@ -145,14 +250,25 @@ const convertors: HTMLToWwConvertorMap = {
     const tag = node.literal!;
 
     if (openTagName) {
-      const [imageUrl, altText] = getMatchedAttributeValue(tag, 'src', 'alt');
-      const { image } = state.schema.nodes;
+      const container = document.createElement('div');
 
-      state.addNode(image, {
+      container.innerHTML = tag;
+      const imgEl = container.firstChild as HTMLImageElement;
+
+      const attrs: Record<string, string> = {
+        src: imgEl.src || '',
+        alt: imgEl.alt || '',
         rawHTML: openTagName,
-        imageUrl,
-        ...(altText && { altText }),
+      };
+
+      // Preserve all original attributes including style
+      Array.from(imgEl.attributes).forEach((attr) => {
+        if (attr.name !== 'src' && attr.name !== 'alt') {
+          attrs[attr.name] = attr.value;
+        }
       });
+
+      state.addNode(state.schema.nodes.image, attrs);
     }
   },
 
@@ -161,33 +277,16 @@ const convertors: HTMLToWwConvertorMap = {
   },
 
   br: (state, node) => {
+    // Simple approach: just add a newline character
+    state.addText('\n');
+
+    // Keep the existing logic as fallback for special cases
     const { paragraph } = state.schema.nodes;
     const { parent, prev, next } = node;
 
     if (parent?.type === 'paragraph') {
-      // should open a paragraph node when line text has only <br> tag
-      // ex) first line\n\n<br>\nfourth line
-      if (isSoftbreak(prev)) {
-        state.openNode(paragraph);
-      }
-
-      // should close a paragraph node when line text has only <br> tag
-      // ex) first line\n\n<br>\nfourth line
-      if (isSoftbreak(next)) {
+      if (isSoftbreak(prev) && isSoftbreak(next)) {
         state.closeNode();
-        // should close a paragraph node and open a paragraph node to separate between blocks
-        // when <br> tag is in the middle of the paragraph
-        // ex) first <br>line\nthird line
-      } else if (next) {
-        state.closeNode();
-        state.openNode(paragraph);
-      }
-    } else if (parent?.type === 'tableCell') {
-      if (prev && (isInlineNode(prev) || isCustomHTMLInlineNode(state, prev))) {
-        state.closeNode();
-      }
-
-      if (next && (isInlineNode(next) || isCustomHTMLInlineNode(state, next))) {
         state.openNode(paragraph);
       }
     }
@@ -251,6 +350,24 @@ const convertors: HTMLToWwConvertorMap = {
 
         state.closeNode();
       }
+    }
+  },
+
+  span: (state, node, openTagName) => {
+    const container = document.createElement('div');
+
+    container.innerHTML = node.literal!;
+    const spanEl = container.firstChild as HTMLElement;
+
+    const attrs = {
+      style: spanEl.getAttribute('style'),
+      class: spanEl.getAttribute('class'),
+    };
+
+    if (openTagName) {
+      state.openMark(state.schema.marks.span.create(attrs));
+    } else {
+      state.closeMark(state.schema.marks.span);
     }
   },
 };

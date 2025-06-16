@@ -1,6 +1,6 @@
 name: Plugin Unit, Integration Test
 on: pull_request
-jobs: 
+jobs:
   plugin-test:
     name: Unit, Integration Test
     runs-on: ubuntu-latest

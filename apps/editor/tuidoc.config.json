@@ -24,11 +24,7 @@
     "filePath": "README.md"
   },
   "api": {
-    "filePath": [
-      "tmpdoc/editorCore.js",
-      "tmpdoc/editor.js",
-      "tmpdoc/viewer.js"
-    ],
+    "filePath": ["tmpdoc/editorCore.js", "tmpdoc/editor.js", "tmpdoc/viewer.js"],
     "permalink": false
   },
   "examples": {

@@ -17,12 +17,14 @@ import { TableHeadCell } from './nodes/tableHeadCell';
 import { TableBodyCell } from './nodes/tableBodyCell';
 import { Image } from './nodes/image';
 import { ThematicBreak } from './nodes/thematicBreak';
+import { Div } from './nodes/div';
 
 import { Strong } from './marks/strong';
 import { Emph } from './marks/emph';
 import { Strike } from './marks/strike';
 import { Link } from './marks/link';
 import { Code } from './marks/code';
+import { Span } from './marks/span';
 import { CustomBlock } from './nodes/customBlock';
 import { FrontMatter } from './nodes/frontMatter';
 import { LinkAttributes } from '@t/editor';
@@ -53,9 +55,11 @@ export function createSpecs(linkAttributes: LinkAttributes) {
     new Strike(),
     new Link(linkAttributes),
     new Code(),
+    new Span(),
     new CustomBlock(),
     new FrontMatter(),
     new Widget(),
     new HTMLComment(),
+    new Div(),
   ]);
 }

@@ -1,6 +1,6 @@
 name: Editor Unit, Integration Test
 on: pull_request
-jobs: 
+jobs:
   test:
     name: Unit, Integration Test
     runs-on: ubuntu-latest
